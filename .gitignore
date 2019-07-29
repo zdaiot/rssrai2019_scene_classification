@@ -1,0 +1,9 @@
+.vscode
+.idea
+__pycache__
+checkpoint/*
+result/*
+datasets/test/*
+datasets/train/*
+datasets/val/*
+classification.txt
