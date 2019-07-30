@@ -104,10 +104,10 @@ def train_val(data_iterator, model, criterion, optimizer, use_cuda, usage):
 
 
 def load_model(state, use_cuda):
-    # create model
+    # create model，若有pretrained参数，则从Pytorch model中加载模型
     if state['pretrained']:
         print("=> using pre-trained model '{}'".format(state['arch']))
-        model = models.__dict__[state['arch']](pretrained=True)
+        model = models.__dict__[state['arch']](num_classes=state['num_classes'], pretrained=True)
     elif state['arch'].startswith('resnext') or state['arch'].startswith('se_resnext'):
         print("=> creating model '{}'".format(state['arch']))
         model = customized_models.__dict__[state['arch']](

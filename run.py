@@ -15,8 +15,8 @@ from pprint import pprint
 import pickle
 
 # Models
-# name中若为小写且不以‘——’开头，则对其进行升序排列，
-# callable功能为判断返回对象是否可调用（即某种功能）。
+# name中若为小写且不以‘——’开头，则对其进行升序排列，callable功能为判断返回对象是否可调用（即某种功能）。
+# default_model_names中为Pytorch官方模型，可以加载预训练权重；而customized_models_names为自定义模型，不能加载预训练权重。
 default_model_names = sorted(name for name in models.__dict__
                              if name.islower() and not name.startswith("__")
                              and callable(models.__dict__[name]))
@@ -45,21 +45,21 @@ else:
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     # Optimization options
-    parser.add_argument('--epochs', default=2, type=int, metavar='N',
+    parser.add_argument('--epochs', default=100, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                         help='manual epoch number (useful on restarts)')
-    parser.add_argument('--train_batch', default=4, type=int, metavar='N',
+    parser.add_argument('--train_batch', default=64, type=int, metavar='N',
                         help='train batchsize (default: 32)')
-    parser.add_argument('--val_batch', default=4, type=int, metavar='N',
+    parser.add_argument('--val_batch', default=64, type=int, metavar='N',
                         help='val batchsize (default: 32)')
-    parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
+    parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate')
     parser.add_argument('--drop', '--dropout', default=0.5, type=float,
                         metavar='Dropout', help='Dropout ratio')
-    parser.add_argument('--schedule', type=int, nargs='+', default=[30, 40],
+    parser.add_argument('--schedule', type=int, nargs='+', default=[40, 60, 80, 90],
                         help='Decrease learning rate at these epochs.')
-    parser.add_argument('--gamma', type=float, default=0.1, help='LR is multiplied by gamma on schedule.')
+    parser.add_argument('--gamma', type=float, default=0.5, help='LR is multiplied by gamma on schedule.')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
     parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
@@ -70,22 +70,20 @@ else:
     parser.add_argument('--resume', default='', type=str, metavar='PATH',
                         help='path to latest checkpoint (default: none)')
     # Architecture
-    parser.add_argument('--arch', '-a', metavar='ARCH', default='resnext50',
+    parser.add_argument('--pretrained', dest='pretrained', action='store_true',
+                        help='use pre-trained model')  # dest是存储的变量
+    parser.add_argument('--arch', '-a', metavar='ARCH', default='densenet121',
                         choices=model_names,
                         help='model architecture: ' +
                              ' | '.join(model_names) +
                              ' (default: resnet18)')
-    parser.add_argument('--num-classes', type=int, help='the number of classes', default=5) # TODO
+    parser.add_argument('--num-classes', type=int, help='the number of classes', default=45)
     parser.add_argument('--depth', type=int, default=29, help='Model depth.')
     parser.add_argument('--cardinality', type=int, default=32, help='ResNet cardinality (group).')
     parser.add_argument('--base-width', type=int, default=4, help='ResNet base width.')
     parser.add_argument('--widen-factor', type=int, default=4, help='Widen factor. 4 -> 64, 8 -> 128, ...')
     # Miscs
     parser.add_argument('--manualSeed', type=int, help='manual seed')
-    parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
-                        help='evaluate model on validation set')
-    parser.add_argument('--pretrained', dest='pretrained', action='store_true',
-                        help='use pre-trained model')  # dest是存储的变量
     # Device options
     parser.add_argument('--gpu_id', type=str, default='0',
                         help='For example 0,1 to run on two GPUs')
@@ -158,6 +156,8 @@ val_loader = DataLoader(
     num_workers=state['workers'], pin_memory=True)
 
 if __name__ == '__main__':
+    if state['pretrained']:
+        assert state['arch'] in default_model_names
     model = load_model(state, use_cuda)
     run(state, model, train_loader, val_loader, use_cuda)
     submit(model, state, use_cuda, mean, std)
