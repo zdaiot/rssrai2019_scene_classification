@@ -13,6 +13,8 @@ import numpy as np
 from PIL import Image
 import torchvision.transforms as transforms
 import pickle
+from torch.utils.data import DataLoader
+from torchvision.datasets import ImageFolder
 
 
 def save_checkpoint(state, is_best, checkpoint='checkpoint', filename='checkpoint.pth.tar'):
@@ -103,11 +105,24 @@ def train_val(data_iterator, model, criterion, optimizer, use_cuda, usage):
     return losses.avg, top1.avg
 
 
-def load_model(state, use_cuda):
-    # create model，若有pretrained参数，则从Pytorch model中加载模型
+def load_model(state, default_model_names, customized_models_names, use_cuda):
     if state['pretrained']:
-        print("=> using pre-trained model '{}'".format(state['arch']))
-        model = models.__dict__[state['arch']](num_classes=state['num_classes'], pretrained=True)
+        assert state['arch'] in default_model_names
+
+    if state['arch'] in default_model_names:
+        if state['pretrained']:
+            print("=> using pre-trained model '{}'".format(state['arch']))
+            model = models.__dict__[state['arch']](pretrained=True)
+            # resnet和densenet的最后一层名字不同
+            if 'resnet' in state['arch']:
+                num_ftrs = model.fc.in_features
+                model.fc = nn.Linear(num_ftrs, state['num_classes'])
+            elif 'densenet' in state['arch']:
+                num_ftrs = model.classifier.in_features
+                model.classifier = nn.Linear(num_ftrs, state['num_classes'])
+        else:
+            print("=> creating model '{}'".format(state['arch']))
+            model = models.__dict__[state['arch']](num_classes=state['num_classes'])
     elif state['arch'].startswith('resnext') or state['arch'].startswith('se_resnext'):
         print("=> creating model '{}'".format(state['arch']))
         model = customized_models.__dict__[state['arch']](
@@ -116,8 +131,7 @@ def load_model(state, use_cuda):
             num_class=state['num_classes']
         )
     else:
-        print("=> creating model '{}'".format(state['arch']))
-        model = models.__dict__[state['arch']](num_classes=state['num_classes'])
+        raise 'model {} is not supported! Please choose model form {}'.format(state['arch'], default_model_names + customized_models_names)
 
     if use_cuda:
         if state['arch'].startswith('alexnet') or state['arch'].startswith('vgg'):
@@ -137,7 +151,44 @@ def load_model(state, use_cuda):
     return model
 
 
-def run(state, model, train_loader, val_loader, use_cuda):
+def run(state, model, mean, std, use_cuda):
+    # 读取数据
+    # ImageFile.LOAD_TRUNCATED_IMAGES = True
+    # train_data = TensorDataset(state['data'], 'train', state['size'])
+    # val_data = TensorDataset(state['data'], 'val', state['size'])
+    normalize = transforms.Normalize(mean=mean,std=std)
+    train_transform = transforms.Compose([
+        transforms.RandomResizedCrop(state['image_size']),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(), # 将图片转换为Tensor,归一化至[0,1]
+        normalize
+    ])
+    val_transform = transforms.Compose([
+        transforms.RandomResizedCrop(state['image_size']),
+        transforms.ToTensor(), # 将图片转换为Tensor,归一化至[0,1]
+        normalize
+    ])
+
+    train_data = ImageFolder(state['train_path'], transform=train_transform)
+    val_data = ImageFolder(state['val_path'], transform=val_transform)
+
+    # 存储文件夹和类标的映射关系
+    output = open(state['checkpoint'] + '/label_encode.pkl', 'wb')
+    pickle.dump(train_data.class_to_idx, output)
+    assert train_data.class_to_idx == val_data.class_to_idx
+    output.close()
+    print(train_data.class_to_idx, val_data.class_to_idx)
+
+    train_loader = DataLoader(
+        train_data,
+        batch_size=state['train_batch'], shuffle=True,
+        num_workers=state['workers'], pin_memory=True)
+
+    val_loader = DataLoader(
+        val_data,
+        batch_size=state['val_batch'], shuffle=True,
+        num_workers=state['workers'], pin_memory=True)
+
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
     optimizer = optim.SGD(model.parameters(), lr=state['lr'], momentum=state['momentum'], weight_decay=state['weight_decay'])

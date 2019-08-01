@@ -31,5 +31,5 @@ For example
 
 run
 ```
-python run.py
+python main.py
 ```

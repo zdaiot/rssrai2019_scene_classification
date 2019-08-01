@@ -5,9 +5,6 @@ import os
 import json
 import torch.backends.cudnn as cudnn
 import torch.nn.parallel
-import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
-from torchvision.datasets import ImageFolder
 import models.imagenet as customized_models
 import torchvision.models as models
 from solver import run, load_model, submit
@@ -57,7 +54,7 @@ else:
                         metavar='LR', help='initial learning rate')
     parser.add_argument('--drop', '--dropout', default=0.5, type=float,
                         metavar='Dropout', help='Dropout ratio')
-    parser.add_argument('--schedule', type=int, nargs='+', default=[40, 60, 80, 90],
+    parser.add_argument('--schedule', type=int, nargs='+', default=[20, 40, 60, 80],
                         help='Decrease learning rate at these epochs.')
     parser.add_argument('--gamma', type=float, default=0.5, help='LR is multiplied by gamma on schedule.')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -70,7 +67,7 @@ else:
     parser.add_argument('--resume', default='', type=str, metavar='PATH',
                         help='path to latest checkpoint (default: none)')
     # Architecture
-    parser.add_argument('--pretrained', dest='pretrained', action='store_true',
+    parser.add_argument('--pretrained', dest='pretrained', action='store_true', default=True,
                         help='use pre-trained model')  # dest是存储的变量
     parser.add_argument('--arch', '-a', metavar='ARCH', default='densenet121',
                         choices=model_names,
@@ -116,48 +113,8 @@ torch.manual_seed(state['manualSeed'])
 if use_cuda:
     torch.cuda.manual_seed_all(state['manualSeed'])
 
-# 读取数据
-# ImageFile.LOAD_TRUNCATED_IMAGES = True
-# train_data = TensorDataset(state['data'], 'train', state['size'])
-# val_data = TensorDataset(state['data'], 'val', state['size'])
-
-mean, std = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
-normalize = transforms.Normalize(mean=mean,std=std)
-train_transform = transforms.Compose([
-    transforms.RandomResizedCrop(state['image_size']),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(), # 将图片转换为Tensor,归一化至[0,1]
-    normalize
-])
-val_transform = transforms.Compose([
-    transforms.RandomResizedCrop(state['image_size']),
-    transforms.ToTensor(), # 将图片转换为Tensor,归一化至[0,1]
-    normalize
-])
-
-train_data = ImageFolder(state['train_path'], transform=train_transform)
-val_data = ImageFolder(state['val_path'], transform=val_transform)
-
-# 存储文件夹和类标的映射关系
-output = open(state['checkpoint'] + '/label_encode.pkl', 'wb')
-pickle.dump(train_data.class_to_idx, output)
-assert train_data.class_to_idx == val_data.class_to_idx
-output.close()
-print(train_data.class_to_idx, val_data.class_to_idx)
-
-train_loader = DataLoader(
-    train_data,
-    batch_size=state['train_batch'], shuffle=True,
-    num_workers=state['workers'], pin_memory=True)
-
-val_loader = DataLoader(
-    val_data,
-    batch_size=state['val_batch'], shuffle=True,
-    num_workers=state['workers'], pin_memory=True)
-
 if __name__ == '__main__':
-    if state['pretrained']:
-        assert state['arch'] in default_model_names
-    model = load_model(state, use_cuda)
-    run(state, model, train_loader, val_loader, use_cuda)
+    mean, std = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
+    model = load_model(state, default_model_names, customized_models_names, use_cuda)
+    run(state, model, mean, std, use_cuda)
     submit(model, state, use_cuda, mean, std)
