@@ -11,6 +11,8 @@ First, Download datasets form https://pan.baidu.com/s/1pw8SmeZ23VRSLXquefiRTA �
 - Unzip test.zip and put in `./datasets`
 - Copy ClsName2id.txt to `./datasets`
 
+delete `./datasets/train/居民区/residential-area_02938.jpg`, because it is not a image file.
+
 For example
 ```
 ├─ClsName2id.txt

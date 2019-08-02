@@ -106,9 +106,6 @@ def train_val(data_iterator, model, criterion, optimizer, use_cuda, usage):
 
 
 def load_model(state, default_model_names, customized_models_names, use_cuda):
-    if state['pretrained']:
-        assert state['arch'] in default_model_names
-
     if state['arch'] in default_model_names:
         if state['pretrained']:
             print("=> using pre-trained model '{}'".format(state['arch']))

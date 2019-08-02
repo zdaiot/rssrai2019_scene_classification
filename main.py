@@ -46,9 +46,9 @@ else:
                         help='number of total epochs to run')
     parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                         help='manual epoch number (useful on restarts)')
-    parser.add_argument('--train_batch', default=64, type=int, metavar='N',
+    parser.add_argument('--train_batch', default=24, type=int, metavar='N',
                         help='train batchsize (default: 32)')
-    parser.add_argument('--val_batch', default=64, type=int, metavar='N',
+    parser.add_argument('--val_batch', default=24, type=int, metavar='N',
                         help='val batchsize (default: 32)')
     parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate')
@@ -69,7 +69,7 @@ else:
     # Architecture
     parser.add_argument('--pretrained', dest='pretrained', action='store_true', default=True,
                         help='use pre-trained model')  # dest是存储的变量
-    parser.add_argument('--arch', '-a', metavar='ARCH', default='densenet121',
+    parser.add_argument('--arch', '-a', metavar='ARCH', default='se_resnext152',
                         choices=model_names,
                         help='model architecture: ' +
                              ' | '.join(model_names) +
