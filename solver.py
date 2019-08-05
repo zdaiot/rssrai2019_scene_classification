@@ -47,13 +47,9 @@ def accuracy(output, target, topk=(1,)):
     return res
 
 
-def train_val(data_iterator, model, criterion, optimizer, use_cuda, usage):
-    if usage == 'train':
-        tqdm_iterator = tqdm(data_iterator)
-        model.train()
-    elif usage == 'val':
-        tqdm_iterator = tqdm(data_iterator)
-        model.eval()
+def train(data_iterator, model, criterion, optimizer, use_cuda):
+    tqdm_iterator = tqdm(data_iterator)
+    model.train()
 
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -79,11 +75,10 @@ def train_val(data_iterator, model, criterion, optimizer, use_cuda, usage):
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
 
-        if usage == 'train':
-            # compute gradient and do SGD step
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -92,7 +87,7 @@ def train_val(data_iterator, model, criterion, optimizer, use_cuda, usage):
         # plot progress
         info = '(Usage:{usage} | Data: {data:.3f}s | Batch: {bt:.3f}s |  Loss: {loss:.4f} | top1: {top1: .4f} | top5: ' \
                '{top5: .4f}'.format(
-            usage=usage,
+            usage='train',
             data=data_time.val,
             bt=batch_time.val,
             loss=losses.avg,
@@ -101,6 +96,54 @@ def train_val(data_iterator, model, criterion, optimizer, use_cuda, usage):
         )
 
         tqdm_iterator.set_description(info)
+
+    return losses.avg, top1.avg
+
+
+def val(data_iterator, model, criterion, optimizer, use_cuda):
+    tqdm_iterator = tqdm(data_iterator)
+    model.eval()
+    with torch.no_grad(): 
+        batch_time = AverageMeter()
+        data_time = AverageMeter()
+        losses = AverageMeter()
+        top1 = AverageMeter()
+        top5 = AverageMeter()
+        end = time.time()
+
+        for inputs, targets in tqdm_iterator:
+            # measure data loading time
+            data_time.update(time.time() - end)
+            if use_cuda:
+                inputs, targets = inputs.cuda(), targets.cuda()
+            inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
+
+            # compute output
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+
+            # measure accuracy and record loss
+            prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
+            losses.update(loss.item(), inputs.size(0))
+            top1.update(prec1.item(), inputs.size(0))
+            top5.update(prec5.item(), inputs.size(0))
+
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            # plot progress
+            info = '(Usage:{usage} | Data: {data:.3f}s | Batch: {bt:.3f}s |  Loss: {loss:.4f} | top1: {top1: .4f} | top5: ' \
+                '{top5: .4f}'.format(
+                usage='val',
+                data=data_time.val,
+                bt=batch_time.val,
+                loss=losses.avg,
+                top1=top1.avg,
+                top5=top5.avg,
+            )
+
+            tqdm_iterator.set_description(info)
 
     return losses.avg, top1.avg
 
@@ -213,8 +256,8 @@ def run(state, model, mean, std, use_cuda):
     for epoch in range(state['start_epoch'], state['epochs']):
         adjust_learning_rate(optimizer, epoch, state)
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, state['epochs'], state['lr']))
-        train_loss, train_acc = train_val(train_loader, model, criterion, optimizer, use_cuda, 'train')
-        test_loss, test_acc = train_val(val_loader, model, criterion, optimizer, use_cuda, 'val')
+        train_loss, train_acc = train(train_loader, model, criterion, optimizer, use_cuda)
+        test_loss, test_acc = val(val_loader, model, criterion, optimizer, use_cuda)
 
         logger.append([state['lr'], train_loss, test_loss, train_acc, test_acc])
 

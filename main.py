@@ -46,9 +46,9 @@ else:
                         help='number of total epochs to run')
     parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                         help='manual epoch number (useful on restarts)')
-    parser.add_argument('--train_batch', default=24, type=int, metavar='N',
+    parser.add_argument('--train_batch', default=32, type=int, metavar='N',
                         help='train batchsize (default: 32)')
-    parser.add_argument('--val_batch', default=24, type=int, metavar='N',
+    parser.add_argument('--val_batch', default=32, type=int, metavar='N',
                         help='val batchsize (default: 32)')
     parser.add_argument('--lr', '--learning-rate', default=0.001, type=float,
                         metavar='LR', help='initial learning rate')
@@ -64,7 +64,7 @@ else:
     # Checkpoints
     parser.add_argument('-c', '--checkpoint', default='checkpoint', type=str, metavar='PATH',
                         help='path to save checkpoint (default: checkpoint)')
-    parser.add_argument('--resume', default='', type=str, metavar='PATH',
+    parser.add_argument('--resume', default='checkpoint/model_best.pth.tar', type=str, metavar='PATH',
                         help='path to latest checkpoint (default: none)')
     # Architecture
     parser.add_argument('--pretrained', dest='pretrained', action='store_true', default=True,
