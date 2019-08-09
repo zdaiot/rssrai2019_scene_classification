@@ -4,6 +4,8 @@ import os
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 from PIL import Image
+import random
+import shutil
 
 
 class TensorDataset(Dataset):
@@ -62,3 +64,18 @@ class TensorDataset(Dataset):
         elif self.usage == 'val':
             return len(self.X_val)
 
+
+def mv_val_train(ratio=0.8):
+    random.seed(2019)
+    path = 'datasets/val'
+    path_move = 'datasets/train'
+    class_list = os.listdir(path)
+    for each_class in class_list:
+        pic_names = os.listdir(os.path.join(path, each_class))
+        # 选取80%的验证集，并选出其中的文件名，并移动文件
+        choose_names = random.sample(pic_names, int(len(pic_names)*ratio))
+        for choose_name in choose_names:
+            shutil.move(os.path.join(path, each_class, choose_name), os.path.join(path_move, each_class, choose_name))
+
+if __name__ == "__main__":
+    mv_val_train()
