@@ -23,7 +23,8 @@ customized_models_names = sorted(name for name in customized_models.__dict__
                                  and callable(customized_models.__dict__[name]))
 
 model_names = default_model_names + customized_models_names
-print('All optional models:', model_names)
+print('Model can use pre-training weights:{}'.format(default_model_names))
+print('Model cannot use pre-training weights:{}'.format(customized_models_names))
 
 use_paras = False
 if use_paras:
